@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang="zh-CN">
+<head>
+  <!-- hexo-inject:begin --><!-- hexo-inject:end --><meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2"/>
+<script src="//cdn.bootcss.com/pace/1.0.2/pace.min.js"></script>
+<link href="//cdn.bootcss.com/pace/1.0.2/themes/pink/pace-theme-flash.css" rel="stylesheet">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=6.2.0" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=6.2.0">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32×32-next.ico?v=6.2.0">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16×16-next.ico?v=6.2.0">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=6.2.0" color="#222">
+
+
+
+
+
+
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    version: '6.2.0',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":true,"onmobile":false},
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="前言这篇Paper是我最近读的与其它Paper具有较大不同的地方，大多数的Paper都是在对网络结构不断的捣鼓，很少会对自然语言本身的语言学角度来创新，而这篇Paper就利用了一丢丢的语言学知识来构建模型，它提出人们通常会使用一些连词例如所以、但是等来表示两个句子之间的逻辑关系，这些词与句子的含义会有很深的联系，因此可以利用这些连词来构建模型。他们通过强化学习的方式来构建一个编码器，然后利用这个编">
+<meta name="keywords" content="nlp Paper">
+<meta property="og:type" content="article">
+<meta property="og:title" content="论文阅读 || 基于强化学习的连词来增强神经网络用于自然语言推理">
+<meta property="og:url" content="http://yoursite.com/2018/08/06/连词/index.html">
+<meta property="og:site_name" content="柒月">
+<meta property="og:description" content="前言这篇Paper是我最近读的与其它Paper具有较大不同的地方，大多数的Paper都是在对网络结构不断的捣鼓，很少会对自然语言本身的语言学角度来创新，而这篇Paper就利用了一丢丢的语言学知识来构建模型，它提出人们通常会使用一些连词例如所以、但是等来表示两个句子之间的逻辑关系，这些词与句子的含义会有很深的联系，因此可以利用这些连词来构建模型。他们通过强化学习的方式来构建一个编码器，然后利用这个编">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="http://pbcgmnu5b.bkt.clouddn.com/nlp-080500.jpg">
+<meta property="og:updated_time" content="2018-08-06T13:37:37.267Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="论文阅读 || 基于强化学习的连词来增强神经网络用于自然语言推理">
+<meta name="twitter:description" content="前言这篇Paper是我最近读的与其它Paper具有较大不同的地方，大多数的Paper都是在对网络结构不断的捣鼓，很少会对自然语言本身的语言学角度来创新，而这篇Paper就利用了一丢丢的语言学知识来构建模型，它提出人们通常会使用一些连词例如所以、但是等来表示两个句子之间的逻辑关系，这些词与句子的含义会有很深的联系，因此可以利用这些连词来构建模型。他们通过强化学习的方式来构建一个编码器，然后利用这个编">
+<meta name="twitter:image" content="http://pbcgmnu5b.bkt.clouddn.com/nlp-080500.jpg">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2018/08/06/连词/"/>
+
+
+
+<script type="text/javascript" id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>论文阅读 || 基于强化学习的连词来增强神经网络用于自然语言推理 | 柒月</title>
+  
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style type="text/css">
+    .use-motion .motion-element,
+    .use-motion .brand,
+    .use-motion .menu-item,
+    .sidebar-inner,
+    .use-motion .post-block,
+    .use-motion .pagination,
+    .use-motion .comments,
+    .use-motion .post-header,
+    .use-motion .post-body,
+    .use-motion .collection-title { opacity: initial; }
+
+    .use-motion .logo,
+    .use-motion .site-title,
+    .use-motion .site-subtitle {
+      opacity: initial;
+      top: initial;
+    }
+
+    .use-motion {
+      .logo-line-before i { left: initial; }
+      .logo-line-after i { right: initial; }
+    }
+  </style>
+</noscript><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+
+</head>
+
+
+
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <!-- hexo-inject:begin --><!-- hexo-inject:end --><div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">柒月</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">Life is short, I love python</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+    <a href="/" rel="section">
+      <i class="menu-item-icon fa fa-fw fa-home"></i> <br />首页</a>
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-about">
+    <a href="/about/" rel="section">
+      <i class="menu-item-icon fa fa-fw fa-user"></i> <br />关于</a>
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-tags">
+    <a href="/tags/" rel="section">
+      <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />标签</a>
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+    <a href="/categories" rel="section">
+      <i class="menu-item-icon fa fa-fw fa-th"></i> <br />分类</a>
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+    <a href="/archives/" rel="section">
+      <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />归档</a>
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+    
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/08/06/连词/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="chaowen hu">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="柒月">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">论文阅读 || 基于强化学习的连词来增强神经网络用于自然语言推理
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2018-08-06 21:37:37" itemprop="dateCreated datePublished" datetime="2018-08-06T21:37:37+08:00">2018-08-06</time>
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/nlp-Paper/" itemprop="url" rel="index"><span itemprop="name">nlp Paper</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h3><p>这篇Paper是我最近读的与其它Paper具有较大不同的地方，大多数的Paper都是在对网络结构不断的捣鼓，很少会对自然语言本身的语言学角度来创新，而这篇Paper就利用了一丢丢的语言学知识来构建模型，它提出人们通常会使用一些连词例如所以、但是等来表示两个句子之间的逻辑关系，这些词与句子的含义会有很深的联系，因此可以利用这些连词来构建模型。他们通过强化学习的方式来构建一个编码器，然后利用这个编码器来建模NLI的假设和前提，从而增强输入的表述。    </p>
+<ul>
+<li>TITLE: Discourse Marker Augmented Network with Reinforcement Learning for Natural Language Inference   </li>
+<li>URL: <a href="http://www.aclweb.org/anthology/P18-1091" target="_blank" rel="noopener">http://www.aclweb.org/anthology/P18-1091</a>  <a id="more"></a>
+<h3 id="方法"><a href="#方法" class="headerlink" title="方法"></a>方法</h3><h4 id="关于Discourse-Marker（连词）"><a href="#关于Discourse-Marker（连词）" class="headerlink" title="关于Discourse Marker（连词）"></a>关于Discourse Marker（连词）</h4>Paper中关于这个任务称为DMP，给定一个句子（$S_1,S_2$),它原本是一个完整句子的前半部分和后半部分，模型通过这两个句子来预测它属于哪一类的连词。<br>主体的框架图如下所示：<br><img src="http://pbcgmnu5b.bkt.clouddn.com/nlp-080500.jpg" alt=""><h4 id="句子编码模型"><a href="#句子编码模型" class="headerlink" title="句子编码模型"></a>句子编码模型</h4>关于DMP的句子编码，此Paper利用BookCorpus作为训练数据，它是一篇未出版的小说，数据集足够大，可以避免某些特定领域或者应用的Bias，通过预处理将其分成（$S_1,S_2,m$),其中m代表连词的标签。  <h4 id="关于Sentence-Representation"><a href="#关于Sentence-Representation" class="headerlink" title="关于Sentence Representation"></a>关于Sentence Representation</h4>根据框架图，可以很直观的看到模型如何构建，其中通过BiLSTM的公式如下：  <script type="math/tex; mode=display">\overrightarrow{r_t} = Max_{dim}([\overrightarrow{h_t^1};\overrightarrow{h_t^2};\cdots ; \overrightarrow{h_t^{|s_t|}}])</script><script type="math/tex; mode=display">\overrightarrow{r_t} = Max_{dim}([\overleftarrow{h_t^1};\overleftarrow{h_t^2};\cdots ; \overleftarrow{h_t^{|s_t|}}])</script>其中Maxdim表示max pooling是在向量拼接后在每一个维度上进行的，然后将两个方向的最后的一个Hidden state以及上文经过max pooling的结果结合在一起，公式如下：  <script type="math/tex; mode=display">r_t = [\overrightarrow{r_t};\overleftarrow{r_t};\overrightarrow{h_t^{|s_t|}};\overleftarrow{h_t^1}]</script>其中$r_t$是句子$s_t$的向量表示，最后通过一个线性操作将其结合作为最后分类的输入：  <script type="math/tex; mode=display">r = [r_1;r_2;r_1+r_2;r_1\odot r_2]</script>其中$\odot$ 表示元素相乘。  <h4 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h4>这一部分就是训练连词的强化学习部分，训练好的模型会用在NLI模型中，对假设和前提进行编码。</li>
+</ul>
+<h4 id="NLI部分"><a href="#NLI部分" class="headerlink" title="NLI部分"></a>NLI部分</h4><p>这一部分和其它的很多网络结构区别不大，首先对假设和前提进行编码，然后通过交互层也就是Attention机制，最后做分类，而这篇Paper最大不同就是利用上面训练好的模型对假设和前提多进行一次编码，具体和上面DMP完全一样，将最后的表示和NLI的通过BiLSTM的表示连接起来一起通过Attention做个交互，最后进行分类。具体细节可以参考论文本身。</p>
+<h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h3><p>这篇Paper的模式跟篇章关系识别的一致，通过连接词来判断两个句子的关系，篇章关系识别主要是通过连接词的来判断，而NLI两个句子是没有连接词的，通过训练一种通用的模型来增强NLI模型的输入的表述，也算是一种比较新颖的做法吧。这一个月看的Paper都是大同小异，全是各种神经网络加Attention，看的脑壳疼，NLP的最后肯定还是的结合语言学的知识才能有更大的突破。</p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/nlp-Paper/" rel="tag"><i class="fa fa-tag"></i> nlp Paper</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/08/06/distance_based/" rel="next" title="论文阅读 || 基于距离的Self-Attention机制网络用于NLI">
+                <i class="fa fa-chevron-left"></i> 论文阅读 || 基于距离的Self-Attention机制网络用于NLI
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2018/08/13/DR-BiLSTM/" rel="prev" title="论文阅读 || 基于DR-BiLSTM网络用于NLI">
+                论文阅读 || 基于DR-BiLSTM网络用于NLI <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/images/avatar.png"
+                alt="chaowen hu" />
+            
+              <p class="site-author-name" itemprop="name">chaowen hu</p>
+              <p class="site-description motion-element" itemprop="description">The harder, The luckier</p>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">10</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  <a href="/categories/index.html">
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">5</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-tags">
+                  <a href="/tags/index.html">
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">5</span>
+                    <span class="site-state-item-name">标签</span>
+                  </a>
+                </div>
+              
+            </nav>
+          
+
+          
+
+          
+            <div class="links-of-author motion-element">
+              
+                <span class="links-of-author-item">
+                  <a href="https://github.com/Julyhcw" target="_blank" title="GitHub"><i class="fa fa-fw fa-github"></i>GitHub</a>
+                  
+                </span>
+              
+                <span class="links-of-author-item">
+                  <a href="https://weibo.com/u/3166775453?topnav=1&topsug=1&is_all=1" target="_blank" title="微博"><i class="fa fa-fw fa-globe"></i>微博</a>
+                  
+                </span>
+              
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#方法"><span class="nav-number">2.</span> <span class="nav-text">方法</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#关于Discourse-Marker（连词）"><span class="nav-number">2.1.</span> <span class="nav-text">关于Discourse Marker（连词）</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#句子编码模型"><span class="nav-number">2.2.</span> <span class="nav-text">句子编码模型</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#关于Sentence-Representation"><span class="nav-number">2.3.</span> <span class="nav-text">关于Sentence Representation</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#小结"><span class="nav-number">2.4.</span> <span class="nav-text">小结</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#NLI部分"><span class="nav-number">2.5.</span> <span class="nav-text">NLI部分</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#总结"><span class="nav-number">3.</span> <span class="nav-text">总结</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="copyright">&copy; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">chaowen hu</span>
+
+  
+
+  
+
+
+
+
+
+
+
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+          <span id="scrollpercent"><span>0</span>%</span>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=6.2.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=6.2.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=6.2.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=6.2.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=6.2.0"></script>
+
+
+
+  
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+  
+
+  
+    
+      <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+      tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"]  ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      }
+    });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Queue(function() {
+      var all = MathJax.Hub.getAllJax(), i;
+        for (i=0; i < all.length; i += 1) {
+          all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+    });
+</script>
+<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+    
+  
+
+
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+	<script type="text/javascript" src="//cdn.bootcss.com/canvas-nest.js/1.0.1/canvas-nest.min.js"></script><!-- hexo-inject:begin --><!-- Begin: Injected MathJax -->
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config("");
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+      all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+  });
+</script>
+
+<script type="text/javascript" src="">
+</script>
+<!-- End: Injected MathJax -->
+<!-- hexo-inject:end -->
+</body>
+</html>
+
+<script type="text/javascript" src="/js/src/love.js"></script>

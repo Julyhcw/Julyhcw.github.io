@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang="zh-CN">
+<head>
+  <!-- hexo-inject:begin --><!-- hexo-inject:end --><meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2"/>
+<script src="//cdn.bootcss.com/pace/1.0.2/pace.min.js"></script>
+<link href="//cdn.bootcss.com/pace/1.0.2/themes/pink/pace-theme-flash.css" rel="stylesheet">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=6.2.0" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=6.2.0">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32×32-next.ico?v=6.2.0">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16×16-next.ico?v=6.2.0">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=6.2.0" color="#222">
+
+
+
+
+
+
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    version: '6.2.0',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":true,"onmobile":false},
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="前言这篇Paper提出一种Dependent Reading Bi-LSTM网络用于NLI，他认为现在的很多关于NLI的方法都是一种Independent Encoding在Premise和Hypothesis上，这些模型都使用简单的Reading机制来对Premise和Hypothesis进行编码，而NLI这种复杂的任务需要明确的依赖关系在前提和假设之间进行建模，包括编码和推理这个过程。因此作者">
+<meta name="keywords" content="nlp Paper">
+<meta property="og:type" content="article">
+<meta property="og:title" content="论文阅读 || 基于DR-BiLSTM网络用于NLI">
+<meta property="og:url" content="http://yoursite.com/2018/08/13/DR-BiLSTM/index.html">
+<meta property="og:site_name" content="柒月">
+<meta property="og:description" content="前言这篇Paper提出一种Dependent Reading Bi-LSTM网络用于NLI，他认为现在的很多关于NLI的方法都是一种Independent Encoding在Premise和Hypothesis上，这些模型都使用简单的Reading机制来对Premise和Hypothesis进行编码，而NLI这种复杂的任务需要明确的依赖关系在前提和假设之间进行建模，包括编码和推理这个过程。因此作者">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="http://pbcgmnu5b.bkt.clouddn.com/nlp081200.png">
+<meta property="og:updated_time" content="2018-08-13T08:11:04.057Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="论文阅读 || 基于DR-BiLSTM网络用于NLI">
+<meta name="twitter:description" content="前言这篇Paper提出一种Dependent Reading Bi-LSTM网络用于NLI，他认为现在的很多关于NLI的方法都是一种Independent Encoding在Premise和Hypothesis上，这些模型都使用简单的Reading机制来对Premise和Hypothesis进行编码，而NLI这种复杂的任务需要明确的依赖关系在前提和假设之间进行建模，包括编码和推理这个过程。因此作者">
+<meta name="twitter:image" content="http://pbcgmnu5b.bkt.clouddn.com/nlp081200.png">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2018/08/13/DR-BiLSTM/"/>
+
+
+
+<script type="text/javascript" id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>论文阅读 || 基于DR-BiLSTM网络用于NLI | 柒月</title>
+  
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style type="text/css">
+    .use-motion .motion-element,
+    .use-motion .brand,
+    .use-motion .menu-item,
+    .sidebar-inner,
+    .use-motion .post-block,
+    .use-motion .pagination,
+    .use-motion .comments,
+    .use-motion .post-header,
+    .use-motion .post-body,
+    .use-motion .collection-title { opacity: initial; }
+
+    .use-motion .logo,
+    .use-motion .site-title,
+    .use-motion .site-subtitle {
+      opacity: initial;
+      top: initial;
+    }
+
+    .use-motion {
+      .logo-line-before i { left: initial; }
+      .logo-line-after i { right: initial; }
+    }
+  </style>
+</noscript><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+
+</head>
+
+
+
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <!-- hexo-inject:begin --><!-- hexo-inject:end --><div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">柒月</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">Life is short, I love python</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+    <a href="/" rel="section">
+      <i class="menu-item-icon fa fa-fw fa-home"></i> <br />首页</a>
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-about">
+    <a href="/about/" rel="section">
+      <i class="menu-item-icon fa fa-fw fa-user"></i> <br />关于</a>
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-tags">
+    <a href="/tags/" rel="section">
+      <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />标签</a>
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+    <a href="/categories" rel="section">
+      <i class="menu-item-icon fa fa-fw fa-th"></i> <br />分类</a>
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+    <a href="/archives/" rel="section">
+      <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />归档</a>
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+    
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/08/13/DR-BiLSTM/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="chaowen hu">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="柒月">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">论文阅读 || 基于DR-BiLSTM网络用于NLI
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2018-08-13 16:11:04" itemprop="dateCreated datePublished" datetime="2018-08-13T16:11:04+08:00">2018-08-13</time>
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/nlp-Paper/" itemprop="url" rel="index"><span itemprop="name">nlp Paper</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h3><p>这篇Paper提出一种Dependent Reading Bi-LSTM网络用于NLI，他认为现在的很多关于NLI的方法都是一种Independent Encoding在Premise和Hypothesis上，这些模型都使用简单的Reading机制来对Premise和Hypothesis进行编码，而NLI这种复杂的任务需要明确的依赖关系在前提和假设之间进行建模，包括编码和推理这个过程。因此作者提出了<em>Dependent Reading</em>策略，目前也有很多可利用的Dependent Reading策略，但是他们有如下两点主要限制：  </p>
+<ul>
+<li>到目前为止，很多人都是将Dependent放在编码这部分，忽略了推理这部分进行Dependent的好处。  </li>
+<li>很多的模型也只是考虑通过Premise来编码Hypothesis,而忽略了利用Hypothesis来编码Premise。  </li>
+</ul>
+<p>作者提出了Dependent Reading Bi-LSTM来解决这些限制，并且在SNLI数据集上单个模型和融合模型分别提高了0.4％和0.3％。  </p>
+<ul>
+<li>TITLE：<a href="http://arxiv.org/abs/1802.05577" target="_blank" rel="noopener">DR-BiLSTM: Dependent Reading Bidirectional LSTM for Natural Language Inference</a>  <a id="more"></a>
+</li>
+</ul>
+<h3 id="方法"><a href="#方法" class="headerlink" title="方法"></a>方法</h3><h4 id="Model"><a href="#Model" class="headerlink" title="Model"></a>Model</h4><p>主要包括：  </p>
+<ul>
+<li>Input Encoding  </li>
+<li>Attention  </li>
+<li>Inference  </li>
+<li>Classification  </li>
+</ul>
+<p>框架图如下：<br><img src="http://pbcgmnu5b.bkt.clouddn.com/nlp081200.png" alt="">  </p>
+<h4 id="Input-Encoding"><a href="#Input-Encoding" class="headerlink" title="Input Encoding"></a>Input Encoding</h4><p>这一部分使用了Bi-LSTM网络来对前提和假设进行编码，公式如下：  </p>
+<script type="math/tex; mode=display">\overline v,s_v = BiLSTM(v,0)</script><script type="math/tex; mode=display">\hat u,- = BiLSTM(u,s_v)</script><hr>
+<script type="math/tex; mode=display">\overline u,s_u = BiLSTM(u,0)</script><script type="math/tex; mode=display">\hat v,- = BiLSTM(v,s_u)</script><p>首先关于依赖$v$对$u$进行编码，先将$v$用Bi-LSTM进行处理，然后Read$u$通过利用Bi-LSTM，它通过先前输出的Final States,就是公式中的$s_v$，这样我们就可以表示一个词比如$u_i$和它的Context Dependent在其它的句子中比如$v$,上面的公式可以很自然的观察到。  </p>
+<h4 id="Attention"><a href="#Attention" class="headerlink" title="Attention"></a>Attention</h4><p>这里采用Soft-attention机制，公式如下：  </p>
+<script type="math/tex; mode=display">e_{ij} = \hat {u_i} {\hat v}_j^T ,i \in [1,n],j \in [1,m]</script><p>这里的${\hat u}_i$和${\hat v}_j$分别是 $u$和$v$的Dependent Reading Hidden表示，交互方式如下 公式：  </p>
+<script type="math/tex; mode=display">\tilde u{_i} = \sum_{j=1}^{m} {\frac{exp(e_{ij})} {\sum_{k=1}^{m}{exp(e_{}ik)}}}{\hat v{_j}},i \in [1,n]</script><script type="math/tex; mode=display">\tilde v{_i} = \sum_{i=1}^{n} {\frac{exp(e_{ij})} {\sum_{k=1}^{m}{exp(e_{}kj)}}}{\hat u{_i}},j \in [1,m]</script><p>Paper中有句话详细表明了这个关系：  </p>
+<blockquote>
+<p>where $\tilde u{}_i$ represents the extracted relevant information of $\hat v$ by attending to $\hat u{_i}$ while $\tilde v{}_j$ represents<br>the extracted relevant information of $\hat u$ by attending to $\hat v{_j}$.  </p>
+</blockquote>
+<p>这个翻译出来好痛苦。<br>最后通过如下公式来丰富收集的注意力信息：  </p>
+<script type="math/tex; mode=display">a_i = [\hat u{_i},\tilde u{_i},\hat u{_i} - \tilde u{_i}, \hat u{_i} \odot \tilde u{_i}]</script><script type="math/tex; mode=display">p_i = RELU(W_p a_i + b_p)</script><hr>
+<script type="math/tex; mode=display">b_j = [\hat v{_j},\tilde v{_j},\hat v{_j} - \tilde v{_j}, \hat v{_j} \odot \tilde v{_j}]</script><script type="math/tex; mode=display">q_j = RELU(W_p b_j + b_p)</script><p>其中$W_p$和$b_p$都是Projector Layer训练的参数。</p>
+<h4 id="Inference"><a href="#Inference" class="headerlink" title="Inference"></a>Inference</h4><p>在这一部分仍然使用Bi-LSTM网络，利用Input类似的操作，根本就是一样的操作对Attention那层的输出进行Dependent Reading机制，最后会做一个Pooling操作，包括Max Pooling和Avg Pooling。</p>
+<blockquote>
+<p>Classification层就是感知机进行分类。</p>
+</blockquote>
+<h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h3><p>本篇Paper最主要的就是Dependent Reading机制，分别在Input和Inference两层进行操作，这种方式感觉也可以用在隐式篇章关系识别上，会更符合直觉上的感知，后面可以试试这种方式。</p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/nlp-Paper/" rel="tag"><i class="fa fa-tag"></i> nlp Paper</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/08/06/连词/" rel="next" title="论文阅读 || 基于强化学习的连词来增强神经网络用于自然语言推理">
+                <i class="fa fa-chevron-left"></i> 论文阅读 || 基于强化学习的连词来增强神经网络用于自然语言推理
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2018/08/15/单向链表/" rel="prev" title="Python实现单向链表">
+                Python实现单向链表 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/images/avatar.png"
+                alt="chaowen hu" />
+            
+              <p class="site-author-name" itemprop="name">chaowen hu</p>
+              <p class="site-description motion-element" itemprop="description">The harder, The luckier</p>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">10</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  <a href="/categories/index.html">
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">5</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-tags">
+                  <a href="/tags/index.html">
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">5</span>
+                    <span class="site-state-item-name">标签</span>
+                  </a>
+                </div>
+              
+            </nav>
+          
+
+          
+
+          
+            <div class="links-of-author motion-element">
+              
+                <span class="links-of-author-item">
+                  <a href="https://github.com/Julyhcw" target="_blank" title="GitHub"><i class="fa fa-fw fa-github"></i>GitHub</a>
+                  
+                </span>
+              
+                <span class="links-of-author-item">
+                  <a href="https://weibo.com/u/3166775453?topnav=1&topsug=1&is_all=1" target="_blank" title="微博"><i class="fa fa-fw fa-globe"></i>微博</a>
+                  
+                </span>
+              
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#方法"><span class="nav-number">2.</span> <span class="nav-text">方法</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Model"><span class="nav-number">2.1.</span> <span class="nav-text">Model</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Input-Encoding"><span class="nav-number">2.2.</span> <span class="nav-text">Input Encoding</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Attention"><span class="nav-number">2.3.</span> <span class="nav-text">Attention</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Inference"><span class="nav-number">2.4.</span> <span class="nav-text">Inference</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#总结"><span class="nav-number">3.</span> <span class="nav-text">总结</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="copyright">&copy; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">chaowen hu</span>
+
+  
+
+  
+
+
+
+
+
+
+
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+          <span id="scrollpercent"><span>0</span>%</span>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=6.2.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=6.2.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=6.2.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=6.2.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=6.2.0"></script>
+
+
+
+  
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+  
+
+  
+    
+      <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+      tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"]  ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      }
+    });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Queue(function() {
+      var all = MathJax.Hub.getAllJax(), i;
+        for (i=0; i < all.length; i += 1) {
+          all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+    });
+</script>
+<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+    
+  
+
+
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+	<script type="text/javascript" src="//cdn.bootcss.com/canvas-nest.js/1.0.1/canvas-nest.min.js"></script><!-- hexo-inject:begin --><!-- Begin: Injected MathJax -->
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config("");
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+      all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+  });
+</script>
+
+<script type="text/javascript" src="">
+</script>
+<!-- End: Injected MathJax -->
+<!-- hexo-inject:end -->
+</body>
+</html>
+
+<script type="text/javascript" src="/js/src/love.js"></script>
