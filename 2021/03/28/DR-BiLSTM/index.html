@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="前言这篇Paper提出一种Dependent Reading Bi-LSTM网络用于NLI，他认为现在的很多关于NLI的方法都是一种Independent Encoding在Premise和Hypothesis上，这些模型都使用简单的Reading机制来对Premise和Hypothesis进行编码，而NLI这种复杂的任务需要明确的依赖关系在前提和假设之间进行建模，包括编码和推理这个过程。因此作者">
+<meta property="og:type" content="article">
+<meta property="og:title" content="论文阅读 || 基于DR-BiLSTM网络用于NLI">
+<meta property="og:url" content="http://example.com/2021/03/28/DR-BiLSTM/index.html">
+<meta property="og:site_name" content="柒月">
+<meta property="og:description" content="前言这篇Paper提出一种Dependent Reading Bi-LSTM网络用于NLI，他认为现在的很多关于NLI的方法都是一种Independent Encoding在Premise和Hypothesis上，这些模型都使用简单的Reading机制来对Premise和Hypothesis进行编码，而NLI这种复杂的任务需要明确的依赖关系在前提和假设之间进行建模，包括编码和推理这个过程。因此作者">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://pbcgmnu5b.bkt.clouddn.com/nlp081200.png">
+<meta property="article:published_time" content="2021-03-28T09:53:42.163Z">
+<meta property="article:modified_time" content="2021-03-28T09:53:42.163Z">
+<meta property="article:author" content="chaowen hu">
+<meta property="article:tag" content="nlp Paper">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://pbcgmnu5b.bkt.clouddn.com/nlp081200.png">
+
+<link rel="canonical" href="http://example.com/2021/03/28/DR-BiLSTM/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>论文阅读 || 基于DR-BiLSTM网络用于NLI | 柒月</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">柒月</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">Life is short, I love python</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/03/28/DR-BiLSTM/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="chaowen hu">
+      <meta itemprop="description" content="The harder, The luckier">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="柒月">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          论文阅读 || 基于DR-BiLSTM网络用于NLI
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-03-28 17:53:42" itemprop="dateCreated datePublished" datetime="2021-03-28T17:53:42+08:00">2021-03-28</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/nlp-Paper/" itemprop="url" rel="index"><span itemprop="name">nlp Paper</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h3 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h3><p>这篇Paper提出一种Dependent Reading Bi-LSTM网络用于NLI，他认为现在的很多关于NLI的方法都是一种Independent Encoding在Premise和Hypothesis上，这些模型都使用简单的Reading机制来对Premise和Hypothesis进行编码，而NLI这种复杂的任务需要明确的依赖关系在前提和假设之间进行建模，包括编码和推理这个过程。因此作者提出了<em>Dependent Reading</em>策略，目前也有很多可利用的Dependent Reading策略，但是他们有如下两点主要限制：  </p>
+<ul>
+<li>到目前为止，很多人都是将Dependent放在编码这部分，忽略了推理这部分进行Dependent的好处。  </li>
+<li>很多的模型也只是考虑通过Premise来编码Hypothesis,而忽略了利用Hypothesis来编码Premise。  </li>
+</ul>
+<p>作者提出了Dependent Reading Bi-LSTM来解决这些限制，并且在SNLI数据集上单个模型和融合模型分别提高了0.4％和0.3％。  </p>
+<ul>
+<li>TITLE：<a target="_blank" rel="noopener" href="http://arxiv.org/abs/1802.05577">DR-BiLSTM: Dependent Reading Bidirectional LSTM for Natural Language Inference</a>  <span id="more"></span></li>
+</ul>
+<h3 id="方法"><a href="#方法" class="headerlink" title="方法"></a>方法</h3><h4 id="Model"><a href="#Model" class="headerlink" title="Model"></a>Model</h4><p>主要包括：  </p>
+<ul>
+<li>Input Encoding  </li>
+<li>Attention  </li>
+<li>Inference  </li>
+<li>Classification  </li>
+</ul>
+<p>框架图如下：<br><img src="http://pbcgmnu5b.bkt.clouddn.com/nlp081200.png">  </p>
+<h4 id="Input-Encoding"><a href="#Input-Encoding" class="headerlink" title="Input Encoding"></a>Input Encoding</h4><p>这一部分使用了Bi-LSTM网络来对前提和假设进行编码，公式如下：<br>$$\overline v,s_v = BiLSTM(v,0)$$<br>$$\hat u,- = BiLSTM(u,s_v)$$  </p>
+<hr>
+<p>$$\overline u,s_u = BiLSTM(u,0)$$<br>$$\hat v,- = BiLSTM(v,s_u)$$<br>首先关于依赖$v$对$u$进行编码，先将$v$用Bi-LSTM进行处理，然后Read$u$通过利用Bi-LSTM，它通过先前输出的Final States,就是公式中的$s_v$，这样我们就可以表示一个词比如$u_i$和它的Context Dependent在其它的句子中比如$v$,上面的公式可以很自然的观察到。  </p>
+<h4 id="Attention"><a href="#Attention" class="headerlink" title="Attention"></a>Attention</h4><p>这里采用Soft-attention机制，公式如下：  </p>
+<p>$$e_{ij} = \hat {u_i} {\hat v}<em>j^T ,i \in [1,n],j \in [1,m]$$<br>这里的${\hat u}<em>i$和${\hat v}<em>j$分别是 $u$和$v$的Dependent Reading Hidden表示，交互方式如下 公式：<br>$$\tilde u{<em>i} = \sum</em>{j=1}^{m} {\frac{exp(e</em>{ij})} {\sum</em>{k=1}^{m}{exp(e</em>{}ik)}}}{\hat v{<em>j}},i \in [1,n] $$<br>$$\tilde v{<em>i} = \sum</em>{i=1}^{n} {\frac{exp(e</em>{ij})} {\sum_{k=1}^{m}{exp(e_{}kj)}}}{\hat u{_i}},j \in [1,m] $$<br>Paper中有句话详细表明了这个关系：  </p>
+<blockquote>
+<p>where $\tilde u{}_i$ represents the extracted relevant information of $\hat v$ by attending to $\hat u{_i}$ while $\tilde v{}_j$ represents<br>the extracted relevant information of $\hat u$ by attending to $\hat v{_j}$.  </p>
+</blockquote>
+<p>这个翻译出来好痛苦。<br>最后通过如下公式来丰富收集的注意力信息：<br>$$a_i = [\hat u{_i},\tilde u{_i},\hat u{_i} - \tilde u{_i}, \hat u{_i} \odot \tilde u{_i}]$$<br>$$p_i = RELU(W_p a_i + b_p)$$  </p>
+<hr>
+<p>$$b_j = [\hat v{_j},\tilde v{_j},\hat v{_j} - \tilde v{_j}, \hat v{_j} \odot \tilde v{_j}]$$<br>$$q_j = RELU(W_p b_j + b_p)$$<br>其中$W_p$和$b_p$都是Projector Layer训练的参数。</p>
+<h4 id="Inference"><a href="#Inference" class="headerlink" title="Inference"></a>Inference</h4><p>在这一部分仍然使用Bi-LSTM网络，利用Input类似的操作，根本就是一样的操作对Attention那层的输出进行Dependent Reading机制，最后会做一个Pooling操作，包括Max Pooling和Avg Pooling。</p>
+<blockquote>
+<p>Classification层就是感知机进行分类。</p>
+</blockquote>
+<h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h3><p>本篇Paper最主要的就是Dependent Reading机制，分别在Input和Inference两层进行操作，这种方式感觉也可以用在隐式篇章关系识别上，会更符合直觉上的感知，后面可以试试这种方式。</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/nlp-Paper/" rel="tag"># nlp Paper</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/03/28/Leetcode-%E5%88%9D%E7%BA%A7%E7%AE%97%E6%B3%95/" rel="prev" title="LeetCode">
+      <i class="fa fa-chevron-left"></i> LeetCode
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/03/28/git_upload/" rel="next" title="Ubuntu上将本地项目上传至Github">
+      Ubuntu上将本地项目上传至Github <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%96%B9%E6%B3%95"><span class="nav-number">2.</span> <span class="nav-text">方法</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Model"><span class="nav-number">2.1.</span> <span class="nav-text">Model</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Input-Encoding"><span class="nav-number">2.2.</span> <span class="nav-text">Input Encoding</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Attention"><span class="nav-number">2.3.</span> <span class="nav-text">Attention</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Inference"><span class="nav-number">2.4.</span> <span class="nav-text">Inference</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">3.</span> <span class="nav-text">总结</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">chaowen hu</p>
+  <div class="site-description" itemprop="description">The harder, The luckier</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">11</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">chaowen hu</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

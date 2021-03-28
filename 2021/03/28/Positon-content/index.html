@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="前言读这篇Paper主要是由于它摘要里面的一句话：we find that separating positional and content information in the encoder can lead to improved parsing accuracy.他提出句子的位置信息和内容分开编码有利于提高句法分析的正确率，这对于我现在的任务是不是也有效果，所以读了主要关于位置和内容分开">
+<meta property="og:type" content="article">
+<meta property="og:title" content="论文阅读 || 基于自注意力机制的成分句法分析">
+<meta property="og:url" content="http://example.com/2021/03/28/Positon-content/index.html">
+<meta property="og:site_name" content="柒月">
+<meta property="og:description" content="前言读这篇Paper主要是由于它摘要里面的一句话：we find that separating positional and content information in the encoder can lead to improved parsing accuracy.他提出句子的位置信息和内容分开编码有利于提高句法分析的正确率，这对于我现在的任务是不是也有效果，所以读了主要关于位置和内容分开">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://pbcgmnu5b.bkt.clouddn.com/nlp-01.jpg">
+<meta property="og:image" content="http://pbcgmnu5b.bkt.clouddn.com/nlp-02.jpg">
+<meta property="og:image" content="http://pbcgmnu5b.bkt.clouddn.com/nlp-03.jpg">
+<meta property="article:published_time" content="2021-03-28T09:53:42.163Z">
+<meta property="article:modified_time" content="2021-03-28T09:53:42.163Z">
+<meta property="article:author" content="chaowen hu">
+<meta property="article:tag" content="nlp Paper">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://pbcgmnu5b.bkt.clouddn.com/nlp-01.jpg">
+
+<link rel="canonical" href="http://example.com/2021/03/28/Positon-content/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>论文阅读 || 基于自注意力机制的成分句法分析 | 柒月</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">柒月</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">Life is short, I love python</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/03/28/Positon-content/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="chaowen hu">
+      <meta itemprop="description" content="The harder, The luckier">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="柒月">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          论文阅读 || 基于自注意力机制的成分句法分析
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-03-28 17:53:42" itemprop="dateCreated datePublished" datetime="2021-03-28T17:53:42+08:00">2021-03-28</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/nlp-Paper/" itemprop="url" rel="index"><span itemprop="name">nlp Paper</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h3 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h3><p>读这篇Paper主要是由于它摘要里面的一句话：we find that separating positional and content information in the encoder can lead to improved parsing accuracy.他提出句子的位置信息和内容分开编码有利于提高句法分析的正确率，这对于我现在的任务是不是也有效果，所以读了主要关于位置和内容分开的部分。  </p>
+<ul>
+<li>TITLE: Constituency Parsing with a Self-Attentive Encoder  </li>
+<li>URL: <a target="_blank" rel="noopener" href="http://www.aclweb.org/anthology/P18-1249">http://www.aclweb.org/anthology/P18-1249</a></li>
+</ul>
+<span id="more"></span>
+<h3 id="方法"><a href="#方法" class="headerlink" title="方法"></a>方法</h3><p>这篇Paper的Encode部分框架图如下：<br><img src="http://pbcgmnu5b.bkt.clouddn.com/nlp-01.jpg"><br>由8个相同的layer组成，输入包含三个部分Vector：  </p>
+<ul>
+<li>Word：可以是随机初始化的或者预先训练好的  </li>
+<li>Tag  </li>
+<li>Position  <h4 id="self-attention"><a href="#self-attention" class="headerlink" title="self-attention"></a>self-attention</h4>框架图如下所示：<br><img src="http://pbcgmnu5b.bkt.clouddn.com/nlp-02.jpg"><br>此部分主要是将输入映射成三个部分：  </li>
+<li>Query: $q_t$  </li>
+<li>Key: $k_t$  </li>
+<li>Value: $v_t$<br>每一层的计算方式及为：  </li>
+</ul>
+<p>$$ SingleHead(X) = [Softmax(\frac{QK^T}{\sqrt(d_k)} V]W_o $$<br>最后将所有层全部加起来：<br>$$ MultiHead(X) = \sum_{n=1}^8 SingleHead^{(n)}(X)$$<br>每一次的都有自己的参数：$W_Q^{(n)}, W_K^{(n)}, W_o^{(n)}$。  </p>
+<h3 id="Position-vs-Content"><a href="#Position-vs-Content" class="headerlink" title="Position vs Content"></a>Position vs Content</h3><p>作者通过很多对比实验说明Position和Content的重要性：  </p>
+<ul>
+<li>丢弃掉Content信息，将输入改成$Q = PW_Q,K = PW_K$,发现结果只下降0.27个百分点，说明影响不是很大。  </li>
+<li>将输入改成$Z_t = [w_t + m_t;p_t]$验证是不是Position和Content信息混合在一起导致Model无法分开它们，但是实验结果只下降0.007，说明并不是这个因素。<br>所以综合以上提出将Positon和Content信息分开计算Attention最后相加，公式表示为：<br>$$q\cdot k = q^{(c)}\cdot k^{(c)} + q^{(p)}\cdot k^{(p)} $$  这时权重矩阵表示为：<br>$$\begin{bmatrix} W^{(c)} &amp; 0 \ 0 &amp; W{(p)} \ \end{bmatrix}$$<br>最后得到的结果从92.67%提升到了93.15%，框架图如下所示：<br><img src="http://pbcgmnu5b.bkt.clouddn.com/nlp-03.jpg"></li>
+</ul>
+<h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h3><p>Paper内容还有很多细节以及对比实验，我只关注了我需要的部分，实验结果证明将Position和Content分开计算Attention对于模型是由一定的提升的效果的，以往的工作都是对解码器进行研究，这篇Paper对编码器进行改进，使其能够更好的捕捉全局的信息，之前的工作都不能很好的利用Position信息，这篇Paper通过加入Position embedding来加入位置信息，我觉得后面可以加此方式加入到我研究的任务中。</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/nlp-Paper/" rel="tag"># nlp Paper</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item"></div>
+      <div class="post-nav-item">
+    <a href="/2021/03/28/Leetcode-%E5%88%9D%E7%BA%A7%E7%AE%97%E6%B3%95/" rel="next" title="LeetCode">
+      LeetCode <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%96%B9%E6%B3%95"><span class="nav-number">2.</span> <span class="nav-text">方法</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#self-attention"><span class="nav-number">2.1.</span> <span class="nav-text">self-attention</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Position-vs-Content"><span class="nav-number">3.</span> <span class="nav-text">Position vs Content</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">4.</span> <span class="nav-text">总结</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">chaowen hu</p>
+  <div class="site-description" itemprop="description">The harder, The luckier</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">11</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">chaowen hu</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="前言这篇Paper是我最近读的与其它Paper具有较大不同的地方，大多数的Paper都是在对网络结构不断的捣鼓，很少会对自然语言本身的语言学角度来创新，而这篇Paper就利用了一丢丢的语言学知识来构建模型，它提出人们通常会使用一些连词例如所以、但是等来表示两个句子之间的逻辑关系，这些词与句子的含义会有很深的联系，因此可以利用这些连词来构建模型。他们通过强化学习的方式来构建一个编码器，然后利用这个编">
+<meta property="og:type" content="article">
+<meta property="og:title" content="论文阅读 || 基于强化学习的连词来增强神经网络用于自然语言推理">
+<meta property="og:url" content="http://example.com/2021/03/28/%E8%BF%9E%E8%AF%8D/index.html">
+<meta property="og:site_name" content="柒月">
+<meta property="og:description" content="前言这篇Paper是我最近读的与其它Paper具有较大不同的地方，大多数的Paper都是在对网络结构不断的捣鼓，很少会对自然语言本身的语言学角度来创新，而这篇Paper就利用了一丢丢的语言学知识来构建模型，它提出人们通常会使用一些连词例如所以、但是等来表示两个句子之间的逻辑关系，这些词与句子的含义会有很深的联系，因此可以利用这些连词来构建模型。他们通过强化学习的方式来构建一个编码器，然后利用这个编">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://pbcgmnu5b.bkt.clouddn.com/nlp-080500.jpg">
+<meta property="article:published_time" content="2021-03-28T09:53:42.166Z">
+<meta property="article:modified_time" content="2021-03-28T09:53:42.166Z">
+<meta property="article:author" content="chaowen hu">
+<meta property="article:tag" content="nlp Paper">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://pbcgmnu5b.bkt.clouddn.com/nlp-080500.jpg">
+
+<link rel="canonical" href="http://example.com/2021/03/28/%E8%BF%9E%E8%AF%8D/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>论文阅读 || 基于强化学习的连词来增强神经网络用于自然语言推理 | 柒月</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">柒月</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">Life is short, I love python</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/03/28/%E8%BF%9E%E8%AF%8D/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="chaowen hu">
+      <meta itemprop="description" content="The harder, The luckier">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="柒月">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          论文阅读 || 基于强化学习的连词来增强神经网络用于自然语言推理
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-03-28 17:53:42" itemprop="dateCreated datePublished" datetime="2021-03-28T17:53:42+08:00">2021-03-28</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/nlp-Paper/" itemprop="url" rel="index"><span itemprop="name">nlp Paper</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h3 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h3><p>这篇Paper是我最近读的与其它Paper具有较大不同的地方，大多数的Paper都是在对网络结构不断的捣鼓，很少会对自然语言本身的语言学角度来创新，而这篇Paper就利用了一丢丢的语言学知识来构建模型，它提出人们通常会使用一些连词例如所以、但是等来表示两个句子之间的逻辑关系，这些词与句子的含义会有很深的联系，因此可以利用这些连词来构建模型。他们通过强化学习的方式来构建一个编码器，然后利用这个编码器来建模NLI的假设和前提，从而增强输入的表述。    </p>
+<ul>
+<li>TITLE: Discourse Marker Augmented Network with Reinforcement Learning for Natural Language Inference   </li>
+<li>URL: <a target="_blank" rel="noopener" href="http://www.aclweb.org/anthology/P18-1091">http://www.aclweb.org/anthology/P18-1091</a>  <span id="more"></span>
+<h3 id="方法"><a href="#方法" class="headerlink" title="方法"></a>方法</h3><h4 id="关于Discourse-Marker（连词）"><a href="#关于Discourse-Marker（连词）" class="headerlink" title="关于Discourse Marker（连词）"></a>关于Discourse Marker（连词）</h4>Paper中关于这个任务称为DMP，给定一个句子（$S_1,S_2$),它原本是一个完整句子的前半部分和后半部分，模型通过这两个句子来预测它属于哪一类的连词。<br>主体的框架图如下所示：<br><img src="http://pbcgmnu5b.bkt.clouddn.com/nlp-080500.jpg"><h4 id="句子编码模型"><a href="#句子编码模型" class="headerlink" title="句子编码模型"></a>句子编码模型</h4>关于DMP的句子编码，此Paper利用BookCorpus作为训练数据，它是一篇未出版的小说，数据集足够大，可以避免某些特定领域或者应用的Bias，通过预处理将其分成（$S_1,S_2,m$),其中m代表连词的标签。  <h4 id="关于Sentence-Representation"><a href="#关于Sentence-Representation" class="headerlink" title="关于Sentence Representation"></a>关于Sentence Representation</h4>根据框架图，可以很直观的看到模型如何构建，其中通过BiLSTM的公式如下：<br>$$\overrightarrow{r_t} = Max_{dim}([\overrightarrow{h_t^1};\overrightarrow{h_t^2};\cdots ; \overrightarrow{h_t^{|s_t|}}])$$<br>$$\overrightarrow{r_t} = Max_{dim}([\overleftarrow{h_t^1};\overleftarrow{h_t^2};\cdots ; \overleftarrow{h_t^{|s_t|}}])$$<br>其中Maxdim表示max pooling是在向量拼接后在每一个维度上进行的，然后将两个方向的最后的一个Hidden state以及上文经过max pooling的结果结合在一起，公式如下：<br>$$r_t = [\overrightarrow{r_t};\overleftarrow{r_t};\overrightarrow{h_t^{|s_t|}};\overleftarrow{h_t^1}]$$<br>其中$r_t$是句子$s_t$的向量表示，最后通过一个线性操作将其结合作为最后分类的输入：<br>$$r = [r_1;r_2;r_1+r_2;r_1\odot r_2]$$<br>其中$\odot$ 表示元素相乘。  <h4 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h4>这一部分就是训练连词的强化学习部分，训练好的模型会用在NLI模型中，对假设和前提进行编码。</li>
+</ul>
+<h4 id="NLI部分"><a href="#NLI部分" class="headerlink" title="NLI部分"></a>NLI部分</h4><p>这一部分和其它的很多网络结构区别不大，首先对假设和前提进行编码，然后通过交互层也就是Attention机制，最后做分类，而这篇Paper最大不同就是利用上面训练好的模型对假设和前提多进行一次编码，具体和上面DMP完全一样，将最后的表示和NLI的通过BiLSTM的表示连接起来一起通过Attention做个交互，最后进行分类。具体细节可以参考论文本身。</p>
+<h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h3><p>这篇Paper的模式跟篇章关系识别的一致，通过连接词来判断两个句子的关系，篇章关系识别主要是通过连接词的来判断，而NLI两个句子是没有连接词的，通过训练一种通用的模型来增强NLI模型的输入的表述，也算是一种比较新颖的做法吧。这一个月看的Paper都是大同小异，全是各种神经网络加Attention，看的脑壳疼，NLP的最后肯定还是的结合语言学的知识才能有更大的突破。</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/nlp-Paper/" rel="tag"># nlp Paper</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/03/28/knn/" rel="prev" title="Machine Learning || KNN">
+      <i class="fa fa-chevron-left"></i> Machine Learning || KNN
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/03/28/%E6%A0%88/" rel="next" title="Python实现栈">
+      Python实现栈 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%96%B9%E6%B3%95"><span class="nav-number">2.</span> <span class="nav-text">方法</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%85%B3%E4%BA%8EDiscourse-Marker%EF%BC%88%E8%BF%9E%E8%AF%8D%EF%BC%89"><span class="nav-number">2.1.</span> <span class="nav-text">关于Discourse Marker（连词）</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%8F%A5%E5%AD%90%E7%BC%96%E7%A0%81%E6%A8%A1%E5%9E%8B"><span class="nav-number">2.2.</span> <span class="nav-text">句子编码模型</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%85%B3%E4%BA%8ESentence-Representation"><span class="nav-number">2.3.</span> <span class="nav-text">关于Sentence Representation</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">2.4.</span> <span class="nav-text">小结</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#NLI%E9%83%A8%E5%88%86"><span class="nav-number">2.5.</span> <span class="nav-text">NLI部分</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">3.</span> <span class="nav-text">总结</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">chaowen hu</p>
+  <div class="site-description" itemprop="description">The harder, The luckier</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">11</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">chaowen hu</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
